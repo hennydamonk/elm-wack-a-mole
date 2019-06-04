@@ -247,7 +247,7 @@ resetTile resT = case resT of
 # Areas
 -}
 areas : Model -> List (Area Msg)
-areas ({ grid, mole, score, gState} as model) = case gState of
+areas ({ grid, mole, score, gState, misses} as model) = case gState of
     Pregame -> 
         [PixelEngine.tiledArea
             { rows = 1
@@ -317,7 +317,26 @@ areas ({ grid, mole, score, gState} as model) = case gState of
                     }
             }
             ((Tile.fromText (0, 0) "R") 
-                |> resetTile) ]
+                |> resetTile) 
+        , PixelEngine.imageArea
+            { background  = 
+                PixelEngine.imageBackground
+                    { height = 22.5
+                    , width = 80
+                    , source = "pitch-black-image.png"
+                    }
+            , height = 20 }
+            [((-23 , 2), PixelEngine.Image.fromText ("SCORE:" ++ String.fromInt score)  wordtileset) ] 
+        , PixelEngine.imageArea
+            { background  = 
+                PixelEngine.imageBackground
+                    { height = 22.5
+                    , width = 80
+                    , source = "pitch-black-image.png"
+                    }
+            , height = 20 }
+            [((-23 , 2), PixelEngine.Image.fromText (" PCT:" ++ String.fromInt ((100*score) // (score + misses)))  wordtileset) ]
+        ]
 
 
 {------------------------
