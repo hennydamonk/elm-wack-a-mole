@@ -249,8 +249,35 @@ resetTile resT = case resT of
 areas : Model -> List (Area Msg)
 areas ({ grid, mole, score, gState, misses} as model) = case gState of
     Pregame -> 
-        [PixelEngine.tiledArea
-            { rows = 1
+        [ PixelEngine.imageArea
+            { background  = 
+                PixelEngine.imageBackground
+                    { height = 30
+                    , width = 80
+                    , source = "wack_yeet.jpg"
+                    }
+            , height = 30 }
+            []
+        , PixelEngine.imageArea
+            { background  = 
+                PixelEngine.imageBackground
+                    { height = 22.5
+                    , width = 80
+                    , source = "pitch-black-image.png"
+                    }
+            , height = 20 }
+            [((-5 , 2), PixelEngine.Image.fromText ("SELECT") wordtileset) ]
+        , PixelEngine.imageArea
+            { background  = 
+                PixelEngine.imageBackground
+                    { height = 30
+                    , width = 80
+                    , source = "pitch-black-image.png"
+                    }
+            , height = 20 }
+            [((17 , 2), PixelEngine.Image.fromText ("DIF") wordtileset) ]
+        , PixelEngine.tiledArea
+            { rows = 2
             , tileset = wordtileset
             , background =
                 PixelEngine.imageBackground
@@ -306,7 +333,25 @@ areas ({ grid, mole, score, gState, misses} as model) = case gState of
             [((-17 , 2), PixelEngine.Image.fromText ("SCORE:" ++ String.fromInt score)  wordtileset) ] 
         ]
     Postgame ->
-        [PixelEngine.tiledArea
+        [ PixelEngine.imageArea
+            { background  = 
+                PixelEngine.imageBackground
+                    { height = 30
+                    , width = 80
+                    , source = "wack_yeet.jpg"
+                    }
+            , height = 30 }
+            []
+        , PixelEngine.imageArea
+            { background  = 
+                PixelEngine.imageBackground
+                    { height = 22.5
+                    , width = 80
+                    , source = "pitch-black-image.png"
+                    }
+            , height = 20 }
+            [((0 , 2), PixelEngine.Image.fromText "RESET" wordtileset) ]
+        , PixelEngine.tiledArea
             { rows = 1
             , tileset = wordtileset
             , background =
@@ -335,7 +380,7 @@ areas ({ grid, mole, score, gState, misses} as model) = case gState of
                     , source = "pitch-black-image.png"
                     }
             , height = 20 }
-            [((-23 , 2), PixelEngine.Image.fromText (" PCT:" ++ String.fromInt ((100*score) // (score + misses)))  wordtileset) ]
+            [((-7 , 2), PixelEngine.Image.fromText ("PCT:" ++ String.fromInt ((100*score) // (score + misses)))  wordtileset) ]
         ]
 
 
