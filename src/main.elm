@@ -46,13 +46,20 @@ type alias Model =
     , curTime : (Float, Random.Seed)
     , moleTile : (Int, Int)
     , randomFlag : Maybe (Int, Random.Seed)
+    , gState : GameState
+    , misses : Int
     }
+
 
 type Msg
     = PlaceMole Position
     | NewMole
     | MoleHit
     | Reset
+    | Easy
+    | Medium
+    | Hard
+    | Miss
 
 
 init : () -> ( Model, Cmd Msg )
@@ -69,6 +76,8 @@ init _ =
       , curTime = makeTime (Random.initialSeed 69)
       , moleTile = (0, 0)
       , randomFlag = Just (makeRando (Random.initialSeed 69))
+      , gState = Pregame
+      , misses = 0
       }
     , newMole gameBoard
     )
@@ -86,7 +95,7 @@ newMole allSquares =
         )
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update msg ({ grid, mole, score, tleft, randomFlag } as model) =
+update msg ({ grid, mole, score, tleft, randomFlag, dif, misses } as model) =
     let
         defaultCase : ( Model, Cmd Msg )
         defaultCase =
@@ -94,12 +103,12 @@ update msg ({ grid, mole, score, tleft, randomFlag } as model) =
     in
     case msg of
         NewMole ->
-            ({ model | tleft = tleft - (Tuple.first model.curTime) }
+            ({ model | tleft = tleft - ((Tuple.first model.curTime) / (toFloat (Maybe.withDefault 1 dif)))}
              , (newMole gameBoard))
         PlaceMole pos ->
             if tleft < 0 then
-                --GameOver
-                defaultCase
+                ({ model | gState = Postgame}
+                 , Cmd.none)
             else
                 ({ model | mole = Just pos
                  , grid = grid |> Grid.insert pos Mole}
@@ -118,6 +127,21 @@ update msg ({ grid, mole, score, tleft, randomFlag } as model) =
                      , Cmd.none)
         Reset ->
             init ()
+        Easy -> 
+            ({ model | gState = Game
+            , dif = Just 1 }
+            , (newMole gameBoard))
+        Medium -> 
+            ({ model | gState = Game
+            , dif = Just 2 }
+            , (newMole gameBoard))
+        Hard -> 
+            ({ model | gState = Game
+            , dif = Just 3 }
+            , (newMole gameBoard))
+        Miss ->
+            ({ model | misses = misses + 1}
+             , Cmd.none)
 
 timeProb : Generator Float
 timeProb = 
@@ -136,8 +160,13 @@ makeRando seed0 =
     Random.step moleProb seed0
 
 subscriptions : Model -> Sub Msg
-subscriptions a =
-    Time.every (((Tuple.first (a.curTime)) * 1000)/(toFloat (Maybe.withDefault 1 a.dif))) (always NewMole)
+subscriptions a = case a.gState of
+    Pregame ->
+        Sub.none
+    Game ->
+        Time.every (((Tuple.first (a.curTime)) * 1000)/(toFloat (Maybe.withDefault 1 a.dif))) (always NewMole)
+    Postgame ->
+        Sub.none
 
 
 moleTile : Model -> Tile Msg
@@ -156,6 +185,7 @@ moleTile model =
 none : Position -> Tile Msg
 none pos =
     Tile.fromPosition ( 0, 7 )
+        |> Tile.clickable Miss
 
 
 viewGrid : Grid Mole -> List ( Position, Tile Msg )
@@ -184,54 +214,110 @@ width : Float
 width =
     toFloat <| 5 * tileSize
 
+homeTiles : List (Tile Msg) -> List ((Int, Int), Tile Msg)
+homeTiles homeT = 
+    let
+        foo i acc tlist =
+            case tlist of
+                [] -> acc
+                f::rest -> 
+                    if i == 0 then
+                        let fdif = f |> Tile.clickable Easy in
+                        foo (i+1) (((i+1, 0), fdif)::acc) rest   
+                    else if i == 1 then
+                        let fdif = f |> Tile.clickable Medium in
+                        foo (i+1) (((i+1, 0), fdif)::acc) rest
+                    else if i == 2 then
+                        let fdif = f |> Tile.clickable Hard in
+                        foo (i+1) (((i+1, 0), fdif)::acc) rest
+                    else
+                        Debug.todo "shouldn't happen"
+    in
+        foo 0 [] homeT
+
+resetTile : List (Tile Msg) -> List ((Int, Int), Tile Msg)
+resetTile resT = case resT of
+    f::rest -> 
+        let fres = f |> Tile.clickable Reset in
+        [((2, 0), fres)]
+
+    _ -> Debug.todo "won't happen" 
+            
 {-|
 # Areas
 -}
 areas : Model -> List (Area Msg)
-areas ({ grid, mole, score} as model) =
-    [ PixelEngine.imageArea
-        { background  = 
-            PixelEngine.imageBackground
-                { height = 30
-                , width = 80
-                , source = "wack_yeet.jpg"
-                }
-        , height = 30 }
-        []
-        , PixelEngine.tiledArea
-        { rows = 4
-        , tileset =
-            { source = "Animal_Pack.png"
-            , spriteWidth = tileSize
-            , spriteHeight = tileSize
+areas ({ grid, mole, score, gState} as model) = case gState of
+    Pregame -> 
+        [PixelEngine.tiledArea
+            { rows = 1
+            , tileset = wordtileset
+            , background =
+                PixelEngine.imageBackground
+                    { height = 80
+                    , width = 80
+                    , source = "pitch-black-image.png"
+                    }
             }
-        , background =
-            PixelEngine.imageBackground
-                { height = 80
-                , width = 80
-                , source = "grass.png"
+            ((Tile.fromText (0, 0) "EMH") 
+                |>homeTiles) ]
+    Game ->
+        [ PixelEngine.imageArea
+            { background  = 
+                PixelEngine.imageBackground
+                    { height = 30
+                    , width = 80
+                    , source = "wack_yeet.jpg"
+                    }
+            , height = 30 }
+            []
+            , PixelEngine.tiledArea
+            { rows = 4
+            , tileset =
+                { source = "Animal_Pack.png"
+                , spriteWidth = tileSize
+                , spriteHeight = tileSize
                 }
-        }
-        (List.concat
-            [ grid |> viewGrid
-            , case mole of
-                Just ( x, y ) ->
-                    [ ( ( x + 1, y + 1 ), moleTile model) ]
+            , background =
+                PixelEngine.imageBackground
+                    { height = 80
+                    , width = 80
+                    , source = "grass.png"
+                    }
+            }
+            (List.concat
+                [ grid |> viewGrid
+                , case mole of
+                    Just ( x, y ) ->
+                        [ ( ( x + 1, y + 1 ), moleTile model) ]
 
-                Nothing ->
-                    []
-            ]
-        )
-        , PixelEngine.imageArea
-        { background  = 
-            PixelEngine.imageBackground
-                { height = 22.5
-                , width = 80
-                , source = "pitch-black-image.png"
-                }
-        , height = 20 }
-        [((-17 , 0), PixelEngine.Image.fromText ("SCORE:" ++ String.fromInt score)  wordtileset) ] 
-    ]
+                    Nothing ->
+                        []
+                ]
+            )
+            , PixelEngine.imageArea
+            { background  = 
+                PixelEngine.imageBackground
+                    { height = 22.5
+                    , width = 80
+                    , source = "pitch-black-image.png"
+                    }
+            , height = 20 }
+            [((-17 , 2), PixelEngine.Image.fromText ("SCORE:" ++ String.fromInt score)  wordtileset) ] 
+        ]
+    Postgame ->
+        [PixelEngine.tiledArea
+            { rows = 1
+            , tileset = wordtileset
+            , background =
+                PixelEngine.imageBackground
+                    { height = 80
+                    , width = 80
+                    , source = "pitch-black-image.png"
+                    }
+            }
+            ((Tile.fromText (0, 0) "R") 
+                |> resetTile) ]
 
 
 {------------------------
