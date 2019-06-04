@@ -1,4 +1,4 @@
-module TicTacToe exposing (main)
+module Main exposing (main)
 
 import Grid exposing (Grid)
 import Grid.Position exposing (Position)
