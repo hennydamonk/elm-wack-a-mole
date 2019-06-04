@@ -15,18 +15,7 @@ import PixelEngine.Options as Options exposing (Options)
 import PixelEngine.Tile as Tile exposing (Tile, Tileset)
 import Random exposing (Generator)
 import Time
---import Array exposing (..)
 import RAL exposing (..)
-
-
---add home screen to choose dificulty
---add option for random animals
---"snake in the grass" gaeplay
-
-
-{------------------------
-   TYPES
-------------------------}
 
 type Mole = Rando
             | Mole
@@ -35,22 +24,10 @@ type GameState = Pregame
                 | Game
                 | Postgame
 
-{-|
-# Players
-In Tic Tac Toe we have two players: one is playing _Noughts_, the other _Crosses_.
-![Noughts and Crosses](https://orasund.github.io/pixelengine/docs/tictactoe1.png "Noughts and Crosses")
--}
-
-{-gameBoard : Array Position
-gameBoard = Array.fromList [(0,0), (0, 1), (1, 0), (1, 1), (2, 0), (2, 1)]
--}
 
 gameBoard : RAList Position
 gameBoard = empty |> cons (0,0) |> cons (0,1) |> cons (1,0) 
     |> cons (1,1) |> cons (2,0) |> cons (2,1)
-
-
-
 
 lettertset : Tile.Tileset
 lettertset = 
@@ -71,24 +48,11 @@ type alias Model =
     , randomFlag : Maybe (Int, Random.Seed)
     }
 
-
-{-|
-# Actions
-What are the things a user should be able to do?
-  - We want to be able to place a mole. (`PlaceMark (x,y)`)
-  - Once the game is over we want to be able to `reset` the game.
--}
 type Msg
     = PlaceMole Position
     | NewMole
     | MoleHit
     | Reset
-
-
-
-{------------------------
-   INIT
-------------------------}
 
 
 init : () -> ( Model, Cmd Msg )
@@ -109,11 +73,6 @@ init _ =
     , newMole gameBoard
     )
 
-
-
-{------------------------
-   UPDATE
-------------------------}
 newMole : RAList Position -> Cmd Msg
 newMole allSquares = 
     Random.generate 
@@ -126,10 +85,6 @@ newMole allSquares =
             (Random.int 0 5)
         )
 
-{-| The update function is very straight forward: First we validate if this move
-is actually legit, and then we update the board accordently and flip the current
-player.
--}
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg ({ grid, mole, score, tleft, randomFlag } as model) =
     let
@@ -164,9 +119,6 @@ update msg ({ grid, mole, score, tleft, randomFlag } as model) =
         Reset ->
             init ()
 
-{------------------------
-   SUBSCRIPTIONS
-------------------------}
 timeProb : Generator Float
 timeProb = 
     Random.float 0.4 1.2
@@ -188,15 +140,6 @@ subscriptions a =
     Time.every (((Tuple.first (a.curTime)) * 1000)/(toFloat (Maybe.withDefault 1 a.dif))) (always NewMole)
 
 
-{------------------------
-   VIEW
-------------------------}
-
-{-|
-# Tiles
--}
-
-
 moleTile : Model -> Tile Msg
 moleTile model = 
     case model.randomFlag of
@@ -210,28 +153,11 @@ moleTile model =
            
 
 
-           {-} let 
-                (i2, seed1) = makeRando seedGlobal
-            in
-            Tile.fromPosition (0, i2)
-                |> Tile.clickable MoleHit-}
-
-{-
-    if x == 0 then
-        Tile.fromPosition (0, 0)
-            |> Tile.clickable MoleHit
-    else
-        Tile.fromPosition (1, 0)
-            |> Tile.clickable MoleHit-}
-
 none : Position -> Tile Msg
 none pos =
     Tile.fromPosition ( 0, 7 )
 
-{-|
-# Grid
-The `Grid` datatype takes care of iteration over all elements of the grid.
--}
+
 viewGrid : Grid Mole -> List ( Position, Tile Msg )
 viewGrid grid =
     grid
@@ -248,6 +174,12 @@ tileSize : Int
 tileSize =
     16
 
+wordtileset : Tileset
+wordtileset = { source = "boxy.png"
+                , spriteWidth = 16
+                , spriteHeight = 16
+                }
+
 width : Float
 width =
     toFloat <| 5 * tileSize
@@ -256,17 +188,16 @@ width =
 # Areas
 -}
 areas : Model -> List (Area Msg)
-areas ({ grid, mole} as model) =
+areas ({ grid, mole, score} as model) =
     [ PixelEngine.imageArea
         { background  = 
             PixelEngine.imageBackground
                 { height = 30
                 , width = 80
-                , source = ""
+                , source = "wack_yeet.jpg"
                 }
-        , height = 20 }
+        , height = 30 }
         []
-
         , PixelEngine.tiledArea
         { rows = 4
         , tileset =
@@ -291,6 +222,15 @@ areas ({ grid, mole} as model) =
                     []
             ]
         )
+        , PixelEngine.imageArea
+        { background  = 
+            PixelEngine.imageBackground
+                { height = 22.5
+                , width = 80
+                , source = "pitch-black-image.png"
+                }
+        , height = 20 }
+        [((-17 , 0), PixelEngine.Image.fromText ("SCORE:" ++ String.fromInt score)  wordtileset) ] 
     ]
 
 
